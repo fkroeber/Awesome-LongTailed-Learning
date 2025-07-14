@@ -6,8 +6,7 @@ tqdm
 pandas
 tensorboard>=1.14
 pyyaml 
-sklearn 
+scikit-learn 
 h5py 
 tensorboardX
 yacs
- 
