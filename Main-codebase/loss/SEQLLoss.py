@@ -16,34 +16,31 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
- 
- 
- 
+
 
 class SEQL(nn.Module):
     def __init__(self, gamma=0.9, lambda_n=0.00043):
         super(SEQL, self).__init__()
         self.gamma = gamma
-        self.lambda_n = lambda_n 
+        self.lambda_n = lambda_n
         dist = [0 for _ in range(1000)]
-        with open('./data/ImageNet_LT/ImageNet_LT_train.txt') as f:
+        with open("./data/ImageNet_LT/ImageNet_LT_train.txt") as f:
             for line in f:
                 dist[int(line.split()[1])] += 1
         num = sum(dist)
-        prob = [i/num for i in dist]
-        prob = torch.FloatTensor(prob)     
+        prob = [i / num for i in dist]
+        prob = torch.FloatTensor(prob)
         self.prob = prob
         class_weight = torch.zeros(1000).cuda()
         for i in range(1000):
-            class_weight[i] = 1 if self.prob[i] > lambda_n else 0 
-        self.class_weight=class_weight
+            class_weight[i] = 1 if self.prob[i] > lambda_n else 0
+        self.class_weight = class_weight
 
     def replace_masked_values(self, tensor, mask, replace_with):
-        assert tensor.dim() == mask.dim(), '{} vs {}'.format(tensor.shape, mask.shape)
+        assert tensor.dim() == mask.dim(), "{} vs {}".format(tensor.shape, mask.shape)
         one_minus_mask = 1 - mask
         values_to_add = replace_with * one_minus_mask
         return tensor * mask + values_to_add
-
 
     def forward(self, input, target):
         N, C = input.shape
@@ -56,8 +53,7 @@ class SEQL(nn.Module):
         input = self.replace_masked_values(input, weights, -1e7)
         loss = F.cross_entropy(input, target)
         return loss
-    
-    
+
     """
     def forward(self, input, target):
         if input.dim()>2:
@@ -89,7 +85,9 @@ class SEQL(nn.Module):
 
         loss = -1 * logpt.log()
         return loss.mean()
-   """  
+   """
+
+
 def create_loss(prior_txt):
-    print('Loading SEQL Loss.')
+    print("Loading SEQL Loss.")
     return SEQL()

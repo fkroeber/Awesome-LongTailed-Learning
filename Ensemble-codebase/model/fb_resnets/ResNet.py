@@ -12,7 +12,6 @@ Copyright (c) 2019, Zhongqi Miao
 All rights reserved.
 """
 
-
 from utils import load_state_dict
 import math
 import torch
@@ -21,10 +20,13 @@ import torch.nn.functional as F
 
 from utils import autocast
 
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
+    )
+
 
 # This class is from LDAM: https://github.com/kaidic/LDAM-DRW.
 class NormedLinear(nn.Module):
@@ -37,6 +39,7 @@ class NormedLinear(nn.Module):
     def forward(self, x):
         out = F.normalize(x, dim=1).mm(F.normalize(self.weight, dim=0))
         return out
+
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -68,7 +71,8 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
-    
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -76,8 +80,9 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
-                               padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -107,13 +112,26 @@ class Bottleneck(nn.Module):
 
         return out
 
+
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, dropout=None, num_classes=1000, use_norm=False, reduce_dimension=False, layer3_output_dim=None, layer4_output_dim=None, load_pretrained_weights=False, returns_feat=False, s=30):
+    def __init__(
+        self,
+        block,
+        layers,
+        dropout=None,
+        num_classes=1000,
+        use_norm=False,
+        reduce_dimension=False,
+        layer3_output_dim=None,
+        layer4_output_dim=None,
+        load_pretrained_weights=False,
+        returns_feat=False,
+        s=30,
+    ):
         self.inplanes = 64
         super(ResNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -135,21 +153,21 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, layer3_output_dim, layers[2], stride=2)
         self.layer4 = self._make_layer(block, layer4_output_dim, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
-        
+
         self.use_dropout = True if dropout else False
 
         if self.use_dropout:
-            print('Using dropout.')
+            print("Using dropout.")
             self.dropout = nn.Dropout(p=dropout)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-        
+
         if use_norm:
             self.linear = NormedLinear(layer4_output_dim * block.expansion, num_classes)
         else:
@@ -163,15 +181,21 @@ class ResNet(nn.Module):
         if load_pretrained_weights:
             caffe_model = True
             if caffe_model:
-                print('Loading Caffe Pretrained ResNet 152 Weights.')
-                pretrained_weights_state_dict = torch.load('./data/caffe_resnet152.pth')
+                print("Loading Caffe Pretrained ResNet 152 Weights.")
+                pretrained_weights_state_dict = torch.load("./data/caffe_resnet152.pth")
             else:
-                print('Loading Places-LT Pretrained ResNet 152 Weights.')
-                pretrained_weights_state_dict = torch.load('./data/places_lt_pretrained.pth')['state_dict_best']['feat_model']
-                pretrained_weights_state_dict = {k[7:]: v for k, v in pretrained_weights_state_dict.items()} # remove "module."
+                print("Loading Places-LT Pretrained ResNet 152 Weights.")
+                pretrained_weights_state_dict = torch.load(
+                    "./data/places_lt_pretrained.pth"
+                )["state_dict_best"]["feat_model"]
+                pretrained_weights_state_dict = {
+                    k[7:]: v for k, v in pretrained_weights_state_dict.items()
+                }  # remove "module."
 
-            should_ignore = lambda param_name: param_name.startswith('fc') # It's called fc in caffe model.
-            
+            should_ignore = lambda param_name: param_name.startswith(
+                "fc"
+            )  # It's called fc in caffe model.
+
             for k in list(pretrained_weights_state_dict.keys()):
                 if should_ignore(k):
                     pretrained_weights_state_dict.pop(k)
@@ -179,10 +203,12 @@ class ResNet(nn.Module):
 
             # The number of parameters may mismatch since we don't have num_batches_tracked in the caffe model.
             load_state_dict(self, pretrained_weights_state_dict, no_ignore=True)
-            
+
             print("Warning: We allow training on layer 3 and layer 4.")
             # should_train = lambda param_name: param_name.startswith('layer3') or param_name.startswith('layer4') or param_name.startswith('linear')
-            should_train = lambda param_name: param_name.startswith('layer4') or param_name.startswith('linear')
+            should_train = lambda param_name: param_name.startswith(
+                "layer4"
+            ) or param_name.startswith("linear")
             for name, param in self.named_parameters():
                 if not should_train(name):
                     param.requires_grad_(False)
@@ -190,7 +216,9 @@ class ResNet(nn.Module):
                     print("Allow gradient on:", name)
 
     def _hook_before_iter(self):
-        assert self.training, "_hook_before_iter should be called at training time only, after train() is called"
+        assert (
+            self.training
+        ), "_hook_before_iter should be called at training time only, after train() is called"
         count = 0
         for module in self.modules():
             if isinstance(module, nn.BatchNorm2d):
@@ -199,14 +227,22 @@ class ResNet(nn.Module):
                     count += 1
 
         if count > 0:
-            print("Warning: detected at least one frozen BN, set them to eval state. Count:", count)
+            print(
+                "Warning: detected at least one frozen BN, set them to eval state. Count:",
+                count,
+            )
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
@@ -231,7 +267,7 @@ class ResNet(nn.Module):
             x = self.layer4(x)
 
             x = self.avgpool(x)
-            
+
             x = x.view(x.size(0), -1)
             self.feat = x
 
@@ -240,12 +276,11 @@ class ResNet(nn.Module):
 
             x = self.linear(x)
 
-            x = x * self.s # This hyperparam s is originally in the loss function, but we moved it here to prevent using s multiple times in distillation.
-            
+            x = (
+                x * self.s
+            )  # This hyperparam s is originally in the loss function, but we moved it here to prevent using s multiple times in distillation.
+
         if self.returns_feat:
-            return {
-                "output": x, 
-                "feat": self.feat
-            }
+            return {"output": x, "feat": self.feat}
         else:
             return x

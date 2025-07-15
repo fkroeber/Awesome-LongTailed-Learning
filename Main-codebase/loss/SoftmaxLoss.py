@@ -12,10 +12,9 @@ Copyright (c) 2019, Zhongqi Miao
 All rights reserved.
 """
 
-
 import torch.nn as nn
 
-def create_loss ():
-    print('Loading Softmax Loss.')
-    return nn.CrossEntropyLoss()
 
+def create_loss():
+    print("Loading Softmax Loss.")
+    return nn.CrossEntropyLoss()

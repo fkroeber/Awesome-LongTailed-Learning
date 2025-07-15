@@ -8,6 +8,7 @@ import random
 import json
 import numpy as np
 
+
 class ImageNet_LT(data.Dataset):
     """Dataset class for the Imagenet-LT dataset."""
 
@@ -22,18 +23,17 @@ class ImageNet_LT(data.Dataset):
         self.train_txt = "./ImageNet_LT_train.txt"
         self.val_txt = "./ImageNet_LT_val.txt"
         self.test_txt = "./ImageNet_LT_test.txt"
-        self.cls_num_list_train = [0]*1000
-        self.cls_num_list_val = [0]*1000
-        self.cls_num_list_test = [0]*1000
+        self.cls_num_list_train = [0] * 1000
+        self.cls_num_list_val = [0] * 1000
+        self.cls_num_list_test = [0] * 1000
         self.preprocess()
- 
-        if mode == 'train':
+
+        if mode == "train":
             self.num_images = len(self.train_dataset)
         elif mode == "val":
             self.num_images = len(self.val_dataset)
-        else: 
+        else:
             self.num_images = len(self.test_dataset)
-        
 
     def preprocess(self):
 
@@ -42,34 +42,34 @@ class ImageNet_LT(data.Dataset):
         test_file = open(self.test_txt, "r")
 
         for elem in train_file.readlines():
-            filename = elem.split(' ')[0]
-            label = int(elem.split(' ')[1])
+            filename = elem.split(" ")[0]
+            label = int(elem.split(" ")[1])
             self.train_dataset.append([filename, label])
             self.cls_num_list_train[label] += 1
 
         for elem in val_file.readlines():
-            filename = elem.split(' ')[0]
-            label = int(elem.split(' ')[1])
+            filename = elem.split(" ")[0]
+            label = int(elem.split(" ")[1])
             self.val_dataset.append([filename, label])
             self.cls_num_list_val[label] += 1
 
         for elem in test_file.readlines():
-            filename = elem.split(' ')[0]
-            label = int(elem.split(' ')[1])
+            filename = elem.split(" ")[0]
+            label = int(elem.split(" ")[1])
             self.test_dataset.append([filename, label])
             self.cls_num_list_test[label] += 1
 
     def __getitem__(self, index):
         """Return one image and its corresponding label."""
         if self.mode == "train":
-           dataset = self.train_dataset
+            dataset = self.train_dataset
         elif self.mode == "val":
-           dataset = self.val_dataset
+            dataset = self.val_dataset
         else:
-           dataset = self.test_dataset
+            dataset = self.test_dataset
 
         filename, label = dataset[index]
-        image = Image.open(os.path.join(self.image_dir, filename)).convert('RGB')
+        image = Image.open(os.path.join(self.image_dir, filename)).convert("RGB")
 
         return self.transform(image), label
 
@@ -79,9 +79,8 @@ class ImageNet_LT(data.Dataset):
 
     def get_cls_num_list(self):
         if self.mode == "train":
-           return self.cls_num_list_train
+            return self.cls_num_list_train
         elif self.mode == "val":
-           return self.cls_num_list_val
+            return self.cls_num_list_val
         else:
-           return self.cls_num_list_test
-
+            return self.cls_num_list_test

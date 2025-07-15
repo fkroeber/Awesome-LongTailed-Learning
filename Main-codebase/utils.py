@@ -1,6 +1,6 @@
 """Copyright (c) Facebook, Inc. and its affiliates.
 Custmoized by Yifan Zhang.
-All rights reserved. 
+All rights reserved.
 """
 
 import numpy as np
@@ -14,43 +14,64 @@ import math
 from bisect import bisect_right
 from collections import Counter
 
+
 def update(config, args, output_dir):
     # Change parameters
-    config['model_dir'] = get_value(config['model_dir'], args.model_dir)
-    config['training_opt']['batch_size'] = \
-        get_value(config['training_opt']['batch_size'], args.batch_size)
-    config['networks']['classifier']['optim_params']['lr'] = \
-        get_value(config['networks']['classifier']['optim_params']['lr'], args.lr)
+    config["model_dir"] = get_value(config["model_dir"], args.model_dir)
+    config["training_opt"]["batch_size"] = get_value(
+        config["training_opt"]["batch_size"], args.batch_size
+    )
+    config["networks"]["classifier"]["optim_params"]["lr"] = get_value(
+        config["networks"]["classifier"]["optim_params"]["lr"], args.lr
+    )
 
     # if using pretrained model, don't change lr
-    if "caffe" in config["networks"]["feat_model"]["params"] and \
-            config["networks"]["feat_model"]["params"]["caffe"]:
+    if (
+        "caffe" in config["networks"]["feat_model"]["params"]
+        and config["networks"]["feat_model"]["params"]["caffe"]
+    ):
         pass
     else:
-        config['networks']['feat_model']['optim_params']['lr'] = \
-            get_value(config['networks']['feat_model']['optim_params']['lr'], args.lr)
+        config["networks"]["feat_model"]["optim_params"]["lr"] = get_value(
+            config["networks"]["feat_model"]["optim_params"]["lr"], args.lr
+        )
 
-    if 'cifar_imb_ratio' in config['training_opt']:
-        config['training_opt']['cifar_imb_ratio'] = \
-            get_value(config['training_opt']['cifar_imb_ratio'], args.cifar_imb_ratio)
-    config['training_opt']['log_dir'] = output_dir
+    if "cifar_imb_ratio" in config["training_opt"]:
+        config["training_opt"]["cifar_imb_ratio"] = get_value(
+            config["training_opt"]["cifar_imb_ratio"], args.cifar_imb_ratio
+        )
+    config["training_opt"]["log_dir"] = output_dir
 
     if "RouteWeightLoss" in config["criterions"].keys():
         if "prior" in config["criterions"]["PerformanceLoss"]["loss_params"]:
-            config['criterions']['PerformanceLoss']['loss_params']['prior'] = \
-                get_value(config['criterions']['PerformanceLoss']['loss_params']['prior'], args.cifar_imb_ratio)
+            config["criterions"]["PerformanceLoss"]["loss_params"]["prior"] = get_value(
+                config["criterions"]["PerformanceLoss"]["loss_params"]["prior"],
+                args.cifar_imb_ratio,
+            )
         if "prior" in config["criterions"]["RouteWeightLoss"]["loss_params"]:
-            config['criterions']['RouteWeightLoss']['loss_params']['prior'] = \
-                get_value(config['criterions']['RouteWeightLoss']['loss_params']['prior'], args.cifar_imb_ratio)
+            config["criterions"]["RouteWeightLoss"]["loss_params"]["prior"] = get_value(
+                config["criterions"]["RouteWeightLoss"]["loss_params"]["prior"],
+                args.cifar_imb_ratio,
+            )
         if "exist_only" in config["criterions"]["RouteWeightLoss"]["loss_params"]:
-            config['criterions']['RouteWeightLoss']['loss_params']['exist_only'] = \
-                get_value(config['criterions']['RouteWeightLoss']['loss_params']['exist_only'], bool(args.exist_only))
+            config["criterions"]["RouteWeightLoss"]["loss_params"]["exist_only"] = (
+                get_value(
+                    config["criterions"]["RouteWeightLoss"]["loss_params"][
+                        "exist_only"
+                    ],
+                    bool(args.exist_only),
+                )
+            )
 
-        config['criterions']['RouteWeightLoss']['weight'] = \
-            get_value(config['criterions']['RouteWeightLoss']['weight'], args.alpha)
-        config['criterions']['RouteWeightLoss']['loss_params']['remine_lambda'] = \
-            get_value(config['criterions']['RouteWeightLoss']['loss_params']['remine_lambda'],
-                      args.remine_lambda)
+        config["criterions"]["RouteWeightLoss"]["weight"] = get_value(
+            config["criterions"]["RouteWeightLoss"]["weight"], args.alpha
+        )
+        config["criterions"]["RouteWeightLoss"]["loss_params"]["remine_lambda"] = (
+            get_value(
+                config["criterions"]["RouteWeightLoss"]["loss_params"]["remine_lambda"],
+                args.remine_lambda,
+            )
+        )
 
     if args.no_use_dv:
         config["criterions"].pop("RouteWeightLoss", None)
@@ -60,10 +81,11 @@ def update(config, args, output_dir):
 
 def source_import(file_path):
     """This function imports python module directly from source code using importlib"""
-    spec = importlib.util.spec_from_file_location('', file_path)
+    spec = importlib.util.spec_from_file_location("", file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
 
 def batch_show(inp, title=None):
     """Imshow for Tensor."""
@@ -72,39 +94,60 @@ def batch_show(inp, title=None):
     std = np.array([0.229, 0.224, 0.225])
     inp = std * inp + mean
     inp = np.clip(inp, 0, 1)
-    plt.figure(figsize=(20,20))
+    plt.figure(figsize=(20, 20))
     plt.imshow(inp)
     if title is not None:
         plt.title(title)
+
 
 def print_write(print_str, log_file):
     print(*print_str)
     if log_file is None:
         return
-    with open(log_file, 'a') as f:
+    with open(log_file, "a") as f:
         print(*print_str, file=f)
+
 
 def init_weights(model, weights_path, caffe=False, classifier=False):
     """Initialize weights"""
-    print('Pretrained %s weights path: %s' % ('classifier' if classifier else 'feature model',
-                                              weights_path))
+    print(
+        "Pretrained %s weights path: %s"
+        % ("classifier" if classifier else "feature model", weights_path)
+    )
     weights = torch.load(weights_path)
     if not classifier:
         if caffe:
-            weights = {k: weights[k] if k in weights else model.state_dict()[k]
-                       for k in model.state_dict()}
+            weights = {
+                k: weights[k] if k in weights else model.state_dict()[k]
+                for k in model.state_dict()
+            }
         else:
-            weights = weights['state_dict_best']['feat_model']
-            weights = {k: weights['module.' + k] if 'module.' + k in weights else model.state_dict()[k]
-                       for k in model.state_dict()}
+            weights = weights["state_dict_best"]["feat_model"]
+            weights = {
+                k: (
+                    weights["module." + k]
+                    if "module." + k in weights
+                    else model.state_dict()[k]
+                )
+                for k in model.state_dict()
+            }
     else:
-        weights = weights['state_dict_best']['classifier']
-        weights = {k: weights['module.fc.' + k] if 'module.fc.' + k in weights else model.state_dict()[k]
-                   for k in model.state_dict()}
+        weights = weights["state_dict_best"]["classifier"]
+        weights = {
+            k: (
+                weights["module.fc." + k]
+                if "module.fc." + k in weights
+                else model.state_dict()[k]
+            )
+            for k in model.state_dict()
+        }
     model.load_state_dict(weights)
     return model
 
-def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_per_cls=False):
+
+def shot_acc(
+    preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_per_cls=False
+):
 
     if isinstance(train_data, np.ndarray):
         training_labels = np.array(train_data).astype(int)
@@ -117,7 +160,7 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
     elif isinstance(preds, np.ndarray):
         pass
     else:
-        raise TypeError('Type ({}) of preds not supported'.format(type(preds)))
+        raise TypeError("Type ({}) of preds not supported".format(type(preds)))
     train_class_count = []
     test_class_count = []
     class_correct = []
@@ -128,18 +171,18 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
 
     b = np.load("./data/shot_list.npy")
     many_shot_bool = b[0]
-    medium_shot_bool = b[1] 
+    medium_shot_bool = b[1]
     few_shot_bool = b[2]
 
     all_list = []
     for i in range(len(train_class_count)):
         all_list.append((class_correct[i] / test_class_count[i]))
     all_list = np.array(all_list)
-    many_shot = all_list[many_shot_bool]    
+    many_shot = all_list[many_shot_bool]
     median_shot = all_list[medium_shot_bool]
     low_shot = all_list[few_shot_bool]
-    #print(len(many_shot))
-    
+    # print(len(many_shot))
+
     """
     many_shot = []
     median_shot = []
@@ -167,7 +210,10 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
     else:
         return np.mean(many_shot), np.mean(median_shot), np.mean(low_shot)
 
-def weighted_shot_acc (preds, labels, ws, train_data, many_shot_thr=100, low_shot_thr=20):
+
+def weighted_shot_acc(
+    preds, labels, ws, train_data, many_shot_thr=100, low_shot_thr=20
+):
 
     training_labels = np.array(train_data.dataset.labels).astype(int)
 
@@ -177,14 +223,16 @@ def weighted_shot_acc (preds, labels, ws, train_data, many_shot_thr=100, low_sho
     elif isinstance(preds, np.ndarray):
         pass
     else:
-        raise TypeError('Type ({}) of preds not supported'.format(type(preds)))
+        raise TypeError("Type ({}) of preds not supported".format(type(preds)))
     train_class_count = []
     test_class_count = []
     class_correct = []
     for l in np.unique(labels):
         train_class_count.append(len(training_labels[training_labels == l]))
-        test_class_count.append(ws[labels==l].sum())
-        class_correct.append(((preds[labels==l] == labels[labels==l]) * ws[labels==l]).sum())
+        test_class_count.append(ws[labels == l].sum())
+        class_correct.append(
+            ((preds[labels == l] == labels[labels == l]) * ws[labels == l]).sum()
+        )
 
     many_shot = []
     median_shot = []
@@ -198,16 +246,22 @@ def weighted_shot_acc (preds, labels, ws, train_data, many_shot_thr=100, low_sho
             median_shot.append((class_correct[i] / test_class_count[i]))
     return np.mean(many_shot), np.mean(median_shot), np.mean(low_shot)
 
+
 def F_measure(preds, labels, theta=None):
     # Regular f1 score
-    return f1_score(labels.detach().cpu().numpy(), preds.detach().cpu().numpy(), average='macro')
+    return f1_score(
+        labels.detach().cpu().numpy(), preds.detach().cpu().numpy(), average="macro"
+    )
+
 
 def mic_acc_cal(preds, labels):
     if isinstance(labels, tuple):
         assert len(labels) == 3
         targets_a, targets_b, lam = labels
-        acc_mic_top1 = (lam * preds.eq(targets_a.data).cpu().sum().float() \
-                       + (1 - lam) * preds.eq(targets_b.data).cpu().sum().float()) / len(preds)
+        acc_mic_top1 = (
+            lam * preds.eq(targets_a.data).cpu().sum().float()
+            + (1 - lam) * preds.eq(targets_b.data).cpu().sum().float()
+        ) / len(preds)
     else:
         acc_mic_top1 = (preds == labels).sum().item() / len(labels)
     return acc_mic_top1
@@ -217,7 +271,8 @@ def weighted_mic_acc_cal(preds, labels, ws):
     acc_mic_top1 = ws[preds == labels].sum() / ws.sum()
     return acc_mic_top1
 
-def class_count (data):
+
+def class_count(data):
     labels = np.array(data.dataset.labels)
     class_data_num = []
     for l in np.unique(labels):
@@ -233,6 +288,7 @@ def torch2numpy(x):
         return tuple([torch2numpy(xi) for xi in x])
     else:
         return x
+
 
 def logits2score(logits, labels):
     scores = F.softmax(logits, dim=1)
@@ -258,14 +314,15 @@ def logits2CE(logits, labels):
 
 
 def get_priority(ptype, logits, labels):
-    if ptype == 'score':
+    if ptype == "score":
         ws = 1 - logits2score(logits, labels)
-    elif ptype == 'entropy':
+    elif ptype == "entropy":
         ws = logits2entropy(logits)
-    elif ptype == 'CE':
+    elif ptype == "CE":
         ws = logits2CE(logits, labels)
 
     return ws
+
 
 def get_value(oldv, newv):
     if newv is not None:
@@ -285,40 +342,53 @@ def print_grad_norm(named_parameters, logger_func, log_file, verbose=False):
     for n, p in named_parameters.items():
         if p.grad is not None:
             param_norm = p.grad.norm(2)
-            total_norm += param_norm ** 2
+            total_norm += param_norm**2
             param_to_norm[n] = param_norm
             param_to_shape[n] = p.size()
 
-    total_norm = total_norm ** (1. / 2)
+    total_norm = total_norm ** (1.0 / 2)
 
-    logger_func(['----------Total norm {:.5f}-----------------'.format(total_norm)], log_file)
+    logger_func(
+        ["----------Total norm {:.5f}-----------------".format(total_norm)], log_file
+    )
     for name, norm in sorted(param_to_norm.items(), key=lambda x: -x[1]):
-        logger_func(["{:<50s}: {:.5f}, ({})".format(name, norm, param_to_shape[name])], log_file)
-    logger_func(['-------------------------------'], log_file)
+        logger_func(
+            ["{:<50s}: {:.5f}, ({})".format(name, norm, param_to_shape[name])], log_file
+        )
+    logger_func(["-------------------------------"], log_file)
 
     return total_norm
 
-def smooth_l1_loss(input, target, beta=1. / 9, reduction='mean'):
+
+def smooth_l1_loss(input, target, beta=1.0 / 9, reduction="mean"):
     n = torch.abs(input - target)
     cond = n < beta
-    loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
-    if reduction == 'mean':
+    loss = torch.where(cond, 0.5 * n**2 / beta, n - 0.5 * beta)
+    if reduction == "mean":
         return loss.mean()
-    elif reduction == 'sum':
+    elif reduction == "sum":
         return loss.sum()
     else:
-        print('XXXXXX Error Reduction Type for smooth_l1_loss, use default mean')
+        print("XXXXXX Error Reduction Type for smooth_l1_loss, use default mean")
         return loss.mean()
 
 
-def l2_loss(input, target, reduction='mean'):
+def l2_loss(input, target, reduction="mean"):
     return F.mse_loss(input, target, reduction=reduction)
 
 
-def regression_loss(input, target, l2=False, pre_mean=True, l1=False, moving_average=False, moving_ratio=0.01):
+def regression_loss(
+    input,
+    target,
+    l2=False,
+    pre_mean=True,
+    l1=False,
+    moving_average=False,
+    moving_ratio=0.01,
+):
     assert (l2 + l1 + moving_average) == 1
     if l2:
-        if (input.shape[0] == target.shape[0]):
+        if input.shape[0] == target.shape[0]:
             assert not pre_mean
             loss = l2_loss(input, target.clone().detach())
         else:
@@ -329,14 +399,17 @@ def regression_loss(input, target, l2=False, pre_mean=True, l1=False, moving_ave
     elif moving_average:
         # input should be register_buffer rather than nn.Parameter
         with torch.no_grad():
-            input = (1 - moving_ratio) * input + moving_ratio * target.clone().detach().mean(0, keepdim=True)
+            input = (
+                1 - moving_ratio
+            ) * input + moving_ratio * target.clone().detach().mean(0, keepdim=True)
         loss = None
     return loss
+
 
 def gumbel_softmax(logits, tau=1, hard=False, gumbel=True, dim=-1):
     if gumbel:
         gumbels = -torch.empty_like(logits).exponential_().log()  # ~Gumbel(0,1)
-        gumbels = (logits + gumbels) / tau                        # ~Gumbel(logits,tau)
+        gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
         y_soft = gumbels.softmax(dim)
     else:
         y_soft = logits.softmax(dim)
@@ -355,7 +428,7 @@ def gumbel_softmax(logits, tau=1, hard=False, gumbel=True, dim=-1):
 def gumbel_sigmoid(logits, tau=1, hard=False, gumbel=True):
     if gumbel:
         gumbels = -torch.empty_like(logits).exponential_().log()  # ~Gumbel(0,1)
-        gumbels = (logits + gumbels) / tau                        # ~Gumbel(logits,tau)
+        gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
         y_soft = torch.sigmoid(gumbels)
     else:
         y_soft = torch.sigmoid(logits)
@@ -368,6 +441,7 @@ def gumbel_sigmoid(logits, tau=1, hard=False, gumbel=True):
         # Reparametrization trick.
         ret = y_soft
     return ret
+
 
 class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
     def __init__(
@@ -414,7 +488,14 @@ class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
         ]
 
 
-def calculate_prior(num_classes, img_max=None, prior=None, prior_txt=None, reverse=False, return_num=False):
+def calculate_prior(
+    num_classes,
+    img_max=None,
+    prior=None,
+    prior_txt=None,
+    reverse=False,
+    return_num=False,
+):
     if prior_txt:
         labels = []
         with open(prior_txt) as f:
@@ -426,7 +507,9 @@ def calculate_prior(num_classes, img_max=None, prior=None, prior_txt=None, rever
         img_num_per_cls = []
         for cls_idx in range(num_classes):
             if reverse:
-                num = img_max * (prior ** ((num_classes - 1 - cls_idx) / (num_classes - 1.0)))
+                num = img_max * (
+                    prior ** ((num_classes - 1 - cls_idx) / (num_classes - 1.0))
+                )
             else:
                 num = img_max * (prior ** (cls_idx / (num_classes - 1.0)))
             img_num_per_cls.append(int(num))

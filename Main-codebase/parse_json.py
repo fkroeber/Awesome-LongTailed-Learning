@@ -2,6 +2,7 @@ import json, os
 import argparse
 from tqdm import tqdm
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train FGVC Network")
 
@@ -22,31 +23,38 @@ def parse_args():
         help="save path for converted file ",
         type=str,
         required=False,
-        default="."
+        default=".",
     )
 
     args = parser.parse_args()
     return args
 
+
 def convert(json_file, image_root):
-    all_annos = json.load(open(json_file, 'r'))
-    import ipdb; ipdb.set_trace()
-    annos = all_annos['annotations']
-    images = all_annos['images']
+    all_annos = json.load(open(json_file, "r"))
+    import ipdb
+
+    ipdb.set_trace()
+    annos = all_annos["annotations"]
+    images = all_annos["images"]
     new_annos = []
 
     print("Converting file {} ...".format(json_file))
     for anno, image in tqdm(zip(annos, images)):
         assert image["id"] == anno["id"]
 
-        new_annos.append({"image_id": image["id"],
-                          "im_height": image["height"],
-                          "im_width": image["width"],
-                          "category_id": anno["category_id"],
-                          "fpath": os.path.join(image_root, image["file_name"])})
+        new_annos.append(
+            {
+                "image_id": image["id"],
+                "im_height": image["height"],
+                "im_width": image["width"],
+                "category_id": anno["category_id"],
+                "fpath": os.path.join(image_root, image["file_name"]),
+            }
+        )
     num_classes = len(all_annos["categories"])
-    return {"annotations": new_annos,
-            "num_classes": num_classes}
+    return {"annotations": new_annos, "num_classes": num_classes}
+
 
 if __name__ == "__main__":
     args = parse_args()

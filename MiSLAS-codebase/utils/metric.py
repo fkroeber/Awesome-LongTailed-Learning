@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
@@ -43,9 +44,9 @@ def calibration(true_labels, pred_labels, confidences, num_bins=15):
         expected_calibration_error: a weighted average of all calibration gaps
         max_calibration_error: the largest calibration gap across all bins
     """
-    assert(len(confidences) == len(pred_labels))
-    assert(len(confidences) == len(true_labels))
-    assert(num_bins > 0)
+    assert len(confidences) == len(pred_labels)
+    assert len(confidences) == len(true_labels)
+    assert num_bins > 0
 
     bin_size = 1.0 / num_bins
     bins = np.linspace(0.0, 1.0, num_bins + 1)
@@ -69,11 +70,13 @@ def calibration(true_labels, pred_labels, confidences, num_bins=15):
     ece = np.sum(gaps * bin_counts) / np.sum(bin_counts)
     mce = np.max(gaps)
 
-    return { "accuracies": bin_accuracies, 
-             "confidences": bin_confidences, 
-             "counts": bin_counts, 
-             "bins": bins,
-             "avg_accuracy": avg_acc,
-             "avg_confidence": avg_conf,
-             "expected_calibration_error": ece,
-             "max_calibration_error": mce }
+    return {
+        "accuracies": bin_accuracies,
+        "confidences": bin_confidences,
+        "counts": bin_counts,
+        "bins": bins,
+        "avg_accuracy": avg_acc,
+        "avg_confidence": avg_conf,
+        "expected_calibration_error": ece,
+        "max_calibration_error": mce,
+    }

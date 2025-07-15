@@ -5,7 +5,6 @@ This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-
 import math
 import torch
 import torch.nn as nn
@@ -13,10 +12,13 @@ import torch.nn.functional as F
 
 from utils import autocast
 
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
+    )
+
 
 class NormedLinear(nn.Module):
 
@@ -28,6 +30,7 @@ class NormedLinear(nn.Module):
     def forward(self, x):
         out = F.normalize(x, dim=1).mm(F.normalize(self.weight, dim=0))
         return out
+
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -59,18 +62,34 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
-    
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None,
-                 groups=1, base_width=64, is_last=False):
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        stride=1,
+        downsample=None,
+        groups=1,
+        base_width=64,
+        is_last=False,
+    ):
         super(Bottleneck, self).__init__()
-        width = int(planes * (base_width / 64.)) * groups
+        width = int(planes * (base_width / 64.0)) * groups
         self.conv1 = nn.Conv2d(inplanes, width, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(width)
-        self.conv2 = nn.Conv2d(width, width, kernel_size=3, stride=stride,
-                               groups=groups, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            width,
+            width,
+            kernel_size=3,
+            stride=stride,
+            groups=groups,
+            padding=1,
+            bias=False,
+        )
         self.bn2 = nn.BatchNorm2d(width)
         self.conv3 = nn.Conv2d(width, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -101,9 +120,25 @@ class Bottleneck(nn.Module):
 
         return out
 
+
 class ResNext(nn.Module):
 
-    def __init__(self, block, layers, num_experts, groups=1, width_per_group=64, dropout=None, num_classes=1000, use_norm=False, reduce_dimension=False, layer3_output_dim=None, layer4_output_dim=None, returns_feat=False, s=30):
+    def __init__(
+        self,
+        block,
+        layers,
+        num_experts,
+        groups=1,
+        width_per_group=64,
+        dropout=None,
+        num_classes=1000,
+        use_norm=False,
+        reduce_dimension=False,
+        layer3_output_dim=None,
+        layer4_output_dim=None,
+        returns_feat=False,
+        s=30,
+    ):
         self.inplanes = 64
         self.num_experts = num_experts
         super(ResNext, self).__init__()
@@ -111,8 +146,7 @@ class ResNext(nn.Module):
         self.groups = groups
         self.base_width = width_per_group
 
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -132,39 +166,61 @@ class ResNext(nn.Module):
                 layer4_output_dim = 384
             else:
                 layer4_output_dim = 512
-        
-        self.layer3s = nn.ModuleList([self._make_layer(block, layer3_output_dim, layers[2], stride=2) for _ in range(num_experts)])
+
+        self.layer3s = nn.ModuleList(
+            [
+                self._make_layer(block, layer3_output_dim, layers[2], stride=2)
+                for _ in range(num_experts)
+            ]
+        )
         self.inplanes = self.next_inplanes
-        self.layer4s = nn.ModuleList([self._make_layer(block, layer4_output_dim, layers[3], stride=2) for _ in range(num_experts)])
+        self.layer4s = nn.ModuleList(
+            [
+                self._make_layer(block, layer4_output_dim, layers[3], stride=2)
+                for _ in range(num_experts)
+            ]
+        )
         self.inplanes = self.next_inplanes
         self.avgpool = nn.AvgPool2d(7, stride=1)
-        
+
         self.use_dropout = True if dropout else False
 
         if self.use_dropout:
-            print('Using dropout.')
+            print("Using dropout.")
             self.dropout = nn.Dropout(p=dropout)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
         if use_norm:
-            self.linears = nn.ModuleList([NormedLinear(layer4_output_dim * block.expansion, num_classes) for _ in range(num_experts)])
+            self.linears = nn.ModuleList(
+                [
+                    NormedLinear(layer4_output_dim * block.expansion, num_classes)
+                    for _ in range(num_experts)
+                ]
+            )
         else:
-            self.linears = nn.ModuleList([nn.Linear(layer4_output_dim * block.expansion, num_classes) for _ in range(num_experts)])
+            self.linears = nn.ModuleList(
+                [
+                    nn.Linear(layer4_output_dim * block.expansion, num_classes)
+                    for _ in range(num_experts)
+                ]
+            )
             s = 1
-        
+
         self.s = s
 
         self.returns_feat = returns_feat
 
     def _hook_before_iter(self):
-        assert self.training, "_hook_before_iter should be called at training time only, after train() is called"
+        assert (
+            self.training
+        ), "_hook_before_iter should be called at training time only, after train() is called"
         count = 0
         for module in self.modules():
             if isinstance(module, nn.BatchNorm2d):
@@ -173,25 +229,47 @@ class ResNext(nn.Module):
                     count += 1
 
         if count > 0:
-            print("Warning: detected at least one frozen BN, set them to eval state. Count:", count)
+            print(
+                "Warning: detected at least one frozen BN, set them to eval state. Count:",
+                count,
+            )
 
     def _make_layer(self, block, planes, blocks, stride=1, is_last=False):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample,
-                            groups=self.groups, base_width=self.base_width))
+        layers.append(
+            block(
+                self.inplanes,
+                planes,
+                stride,
+                downsample,
+                groups=self.groups,
+                base_width=self.base_width,
+            )
+        )
         self.next_inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.next_inplanes, planes,
-                                groups=self.groups, base_width=self.base_width,
-                                is_last=(is_last and i == blocks-1)))
+            layers.append(
+                block(
+                    self.next_inplanes,
+                    planes,
+                    groups=self.groups,
+                    base_width=self.base_width,
+                    is_last=(is_last and i == blocks - 1),
+                )
+            )
 
         return nn.Sequential(*layers)
 
@@ -200,7 +278,7 @@ class ResNext(nn.Module):
         x = (self.layer4s[ind])(x)
 
         x = self.avgpool(x)
-        
+
         x = x.view(x.size(0), -1)
 
         if self.use_dropout:
@@ -230,9 +308,9 @@ class ResNext(nn.Module):
 
         if self.returns_feat:
             return {
-                "output": final_out, 
+                "output": final_out,
                 "feat": torch.stack(self.feat, dim=1),
-                "logits": torch.stack(outs, dim=1)
+                "logits": torch.stack(outs, dim=1),
             }
         else:
             return final_out

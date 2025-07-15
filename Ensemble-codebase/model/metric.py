@@ -1,5 +1,6 @@
 import torch
 
+
 def accuracy(output, target, return_length=False):
     with torch.no_grad():
         pred = torch.argmax(output, dim=1)
@@ -10,7 +11,8 @@ def accuracy(output, target, return_length=False):
         return correct / len(target), len(target)
     else:
         return correct / len(target)
-    
+
+
 def top_k_acc(output, target, k=5, return_length=False):
     with torch.no_grad():
         pred = torch.topk(output, k, dim=1)[1]

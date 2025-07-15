@@ -3,8 +3,9 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 
+
 class ImageNetLT(Dataset):
-    
+
     def __init__(self, root, txt, transform=None):
         self.img_path = []
         self.labels = []
@@ -16,14 +17,14 @@ class ImageNetLT(Dataset):
 
     def __len__(self):
         return len(self.labels)
-        
+
     def __getitem__(self, index):
         path = self.img_path[index]
         label = self.labels[index]
-        
-        with open(path, 'rb') as f:
-            sample = Image.open(f).convert('RGB')
-        
+
+        with open(path, "rb") as f:
+            sample = Image.open(f).convert("RGB")
+
         if self.transform is not None:
             sample = self.transform(sample)
 

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 def mixup_data(x, y, alpha=1.0, use_cuda=True):
-    '''Returns mixed inputs, pairs of targets, and lambda'''
+    """Returns mixed inputs, pairs of targets, and lambda"""
     if alpha > 0:
         lam = np.random.beta(alpha, alpha)
     else:
@@ -29,23 +29,33 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
 
 
 class LabelAwareSmoothing(nn.Module):
-    def __init__(self, cls_num_list, smooth_head, smooth_tail, shape='concave', power=None):
+    def __init__(
+        self, cls_num_list, smooth_head, smooth_tail, shape="concave", power=None
+    ):
         super(LabelAwareSmoothing, self).__init__()
 
         n_1 = max(cls_num_list)
         n_K = min(cls_num_list)
 
-        if shape == 'concave':
-            self.smooth = smooth_tail + (smooth_head - smooth_tail) * np.sin((np.array(cls_num_list) - n_K) * np.pi / (2 * (n_1 - n_K)))
+        if shape == "concave":
+            self.smooth = smooth_tail + (smooth_head - smooth_tail) * np.sin(
+                (np.array(cls_num_list) - n_K) * np.pi / (2 * (n_1 - n_K))
+            )
 
-        elif shape == 'linear':
-            self.smooth = smooth_tail + (smooth_head - smooth_tail) * (np.array(cls_num_list) - n_K) / (n_1 - n_K)
+        elif shape == "linear":
+            self.smooth = smooth_tail + (smooth_head - smooth_tail) * (
+                np.array(cls_num_list) - n_K
+            ) / (n_1 - n_K)
 
-        elif shape == 'convex':
-            self.smooth = smooth_head + (smooth_head - smooth_tail) * np.sin(1.5 * np.pi + (np.array(cls_num_list) - n_K) * np.pi / (2 * (n_1 - n_K)))
+        elif shape == "convex":
+            self.smooth = smooth_head + (smooth_head - smooth_tail) * np.sin(
+                1.5 * np.pi + (np.array(cls_num_list) - n_K) * np.pi / (2 * (n_1 - n_K))
+            )
 
-        elif shape == 'exp' and power is not None:
-            self.smooth = smooth_tail + (smooth_head - smooth_tail) * np.power((np.array(cls_num_list) - n_K) / (n_1 - n_K), power)
+        elif shape == "exp" and power is not None:
+            self.smooth = smooth_tail + (smooth_head - smooth_tail) * np.power(
+                (np.array(cls_num_list) - n_K) / (n_1 - n_K), power
+            )
 
         self.smooth = torch.from_numpy(self.smooth)
         self.smooth = self.smooth.float()
@@ -54,7 +64,7 @@ class LabelAwareSmoothing(nn.Module):
 
     def forward(self, x, target):
         smoothing = self.smooth[target]
-        confidence = 1. - smoothing
+        confidence = 1.0 - smoothing
         logprobs = F.log_softmax(x, dim=-1)
         nll_loss = -logprobs.gather(dim=-1, index=target.unsqueeze(1))
         nll_loss = nll_loss.squeeze(1)

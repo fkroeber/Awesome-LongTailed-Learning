@@ -14,7 +14,11 @@ class PriorCELoss(nn.Module):
     # Also named as LADE-CE Loss
     def __init__(self, num_classes, img_max=None, prior=None, prior_txt=None):
         super().__init__()
-        self.img_num_per_cls = calculate_prior(num_classes, img_max, prior, prior_txt, return_num=True).float().cuda()
+        self.img_num_per_cls = (
+            calculate_prior(num_classes, img_max, prior, prior_txt, return_num=True)
+            .float()
+            .cuda()
+        )
         self.prior = self.img_num_per_cls / self.img_num_per_cls.sum()
         self.criterion = nn.CrossEntropyLoss()
         self.num_classes = num_classes
@@ -26,7 +30,7 @@ class PriorCELoss(nn.Module):
 
 
 def create_loss(num_classes, img_max=None, prior=None, prior_txt=None):
-    print('Loading PriorCELoss Loss.')
+    print("Loading PriorCELoss Loss.")
     return PriorCELoss(
         num_classes=num_classes,
         img_max=img_max,

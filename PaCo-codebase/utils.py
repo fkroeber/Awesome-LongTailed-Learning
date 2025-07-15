@@ -5,7 +5,10 @@ from sklearn.metrics import f1_score
 import torch.nn.functional as F
 import importlib
 
-def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_per_cls=False):
+
+def shot_acc(
+    preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_per_cls=False
+):
     if isinstance(train_data, np.ndarray):
         training_labels = np.array(train_data).astype(int)
     else:
@@ -17,7 +20,7 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
     elif isinstance(preds, np.ndarray):
         pass
     else:
-        raise TypeError('Type ({}) of preds not supported'.format(type(preds)))
+        raise TypeError("Type ({}) of preds not supported".format(type(preds)))
     train_class_count = []
     test_class_count = []
     class_correct = []
@@ -35,8 +38,8 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
         elif train_class_count[i] < low_shot_thr:
             low_shot.append((class_correct[i] / test_class_count[i]))
         else:
-            median_shot.append((class_correct[i] / test_class_count[i]))    
- 
+            median_shot.append((class_correct[i] / test_class_count[i]))
+
     if len(many_shot) == 0:
         many_shot.append(0)
     if len(median_shot) == 0:
@@ -45,7 +48,7 @@ def shot_acc(preds, labels, train_data, many_shot_thr=100, low_shot_thr=20, acc_
         low_shot.append(0)
 
     if acc_per_cls:
-        class_accs = [c / cnt for c, cnt in zip(class_correct, test_class_count)] 
+        class_accs = [c / cnt for c, cnt in zip(class_correct, test_class_count)]
         return np.mean(many_shot), np.mean(median_shot), np.mean(low_shot), class_accs
     else:
         return np.mean(many_shot), np.mean(median_shot), np.mean(low_shot)
