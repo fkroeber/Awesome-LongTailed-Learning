@@ -178,9 +178,9 @@ def shot_acc(
     for i in range(len(train_class_count)):
         all_list.append((class_correct[i] / test_class_count[i]))
     all_list = np.array(all_list)
-    many_shot = all_list[many_shot_bool]
-    median_shot = all_list[medium_shot_bool]
-    low_shot = all_list[few_shot_bool]
+    # many_shot = all_list[many_shot_bool]
+    # median_shot = all_list[medium_shot_bool]
+    # low_shot = all_list[few_shot_bool]
     # print(len(many_shot))
 
     """
@@ -197,12 +197,12 @@ def shot_acc(
             median_shot.append((class_correct[i] / test_class_count[i]))    
     """
 
-    if len(many_shot) == 0:
-        many_shot.append(0)
-    if len(median_shot) == 0:
-        median_shot.append(0)
-    if len(low_shot) == 0:
-        low_shot.append(0)
+    # if len(many_shot) == 0:
+    #     many_shot.append(0)
+    # if len(median_shot) == 0:
+    #     median_shot.append(0)
+    # if len(low_shot) == 0:
+    #     low_shot.append(0)
 
     if acc_per_cls:
         class_accs = [c / cnt for c, cnt in zip(class_correct, test_class_count)]

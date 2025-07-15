@@ -19,8 +19,6 @@ from utils import *
 from logger import Logger
 import time
 import numpy as np
-import warnings
-import pdb
 from torch.utils.tensorboard import SummaryWriter
 
 from sklearn.decomposition import IncrementalPCA
@@ -581,15 +579,15 @@ class model:
                 map(np.concatenate, [normal_preds, normal_labels])
             )
             n_top1 = mic_acc_cal(normal_preds, normal_labels)
-            (
-                n_top1_many,
-                n_top1_median,
-                n_top1_low,
-            ) = shot_acc(normal_preds, normal_labels, self.data["train"])
+            # (
+            #     n_top1_many,
+            #     n_top1_median,
+            #     n_top1_low,
+            # ) = shot_acc(normal_preds, normal_labels, self.data["train"])
             rsl["train_all"] += len(normal_preds) / n_total * n_top1
-            rsl["train_many"] += len(normal_preds) / n_total * n_top1_many
-            rsl["train_median"] += len(normal_preds) / n_total * n_top1_median
-            rsl["train_low"] += len(normal_preds) / n_total * n_top1_low
+            rsl["train_many"] += 0
+            rsl["train_median"] += 0
+            rsl["train_low"] += 0
 
         # Calculate mixup prediction accuracy
         if len(mixup_preds) > 0:
@@ -601,17 +599,17 @@ class model:
             )
             mixup_ws = np.concatenate([mixup_ws, 1 - mixup_ws])
             n_top1 = weighted_mic_acc_cal(mixup_preds, mixup_labels, mixup_ws)
-            (
-                n_top1_many,
-                n_top1_median,
-                n_top1_low,
-            ) = weighted_shot_acc(
-                mixup_preds, mixup_labels, mixup_ws, self.data["train"]
-            )
+            # (
+            #     n_top1_many,
+            #     n_top1_median,
+            #     n_top1_low,
+            # ) = weighted_shot_acc(
+            #     mixup_preds, mixup_labels, mixup_ws, self.data["train"]
+            # )
             rsl["train_all"] += len(mixup_preds) / 2 / n_total * n_top1
-            rsl["train_many"] += len(mixup_preds) / 2 / n_total * n_top1_many
-            rsl["train_median"] += len(mixup_preds) / 2 / n_total * n_top1_median
-            rsl["train_low"] += len(mixup_preds) / 2 / n_total * n_top1_low
+            rsl["train_many"] += 0
+            rsl["train_median"] += 0
+            rsl["train_low"] += 0
 
         # Top-1 accuracy and additional string
         print_str = [
@@ -724,12 +722,10 @@ class model:
         )
 
         self.many_acc_top1, self.median_acc_top1, self.low_acc_top1, self.cls_accs = (
-            shot_acc(
-                preds[self.total_labels != -1],
-                self.total_labels[self.total_labels != -1],
-                self.data["train"],
-                acc_per_cls=True,
-            )
+            0,
+            0,
+            0,
+            0,
         )
 
         # Top-1 accuracy and additional string

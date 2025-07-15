@@ -1,0 +1,42 @@
+criterions:
+  PerformanceLoss:
+    def_file: ./loss/PriorCELoss.py
+    loss_params: {num_classes: 2, prior_txt: './data/ImageNet_LT/ImageNet_LT_train.txt'}
+    optim_params: null
+    weight: 1.0
+  RouteWeightLoss:
+    def_file: ./loss/LADELoss.py
+    loss_params: {num_classes: 2, prior_txt: './data/ImageNet_LT/ImageNet_LT_train.txt', remine_lambda: 0.1}
+    optim_params: null
+    weight: 0.1
+last: false
+model_dir: null
+networks:
+  classifier:
+    def_file: ./models/DotProductClassifier.py
+    optim_params: {lr: 0.001, momentum: 0.9, weight_decay: 0.0005, threshold_momentum: 0.0}
+    scheduler_params: {coslr: true, endlr: 0.0, gamma: 0.1, step_size: 30}
+    params: {dataset: S2_Dataset, feat_dim: 8192, num_classes: 2, use_route: true}
+  feat_model:
+    def_file: ./models/ResNext50Feature.py
+    fix: false
+    optim_params: {lr: 0.001, momentum: 0.9, weight_decay: 0.0005}
+    scheduler_params: {coslr: true, endlr: 0.0, gamma: 0.1, step_size: 30}
+    params: {dataset: S2_Dataset, dropout: null, stage1_weights: false, use_fc: false}
+shuffle: true
+training_opt:
+  backbone: resnext50
+  batch_size: 16
+  dataset: S2_Dataset
+  display_step: 10
+  display_grad: False
+  display_grad_step: 10
+  feature_dim: 8192
+  log_dir: ./logs/S2_Dataset/models/resnext50_lade
+  log_root: /logs/S2_Dataset
+  num_classes: 2
+  num_epochs: 100
+  num_workers: 12
+  open_threshold: 0.1
+  sampler: null
+  sub_dir: models

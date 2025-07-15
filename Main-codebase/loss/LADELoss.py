@@ -22,11 +22,12 @@ class LADELoss(nn.Module):
     ):
         super().__init__()
         if img_max is not None or prior_txt is not None:
-            self.img_num_per_cls = (
-                calculate_prior(num_classes, img_max, prior, prior_txt, return_num=True)
-                .float()
-                .cuda()
-            )
+            # self.img_num_per_cls = (
+            #     calculate_prior(num_classes, img_max, prior, prior_txt, return_num=True)
+            #     .float()
+            #     .cuda()
+            # )
+            self.img_num_per_cls = torch.Tensor(np.array([200, 20])).to("cuda")
             self.prior = self.img_num_per_cls / self.img_num_per_cls.sum()
         else:
             self.prior = None

@@ -16,7 +16,7 @@ from pathlib import Path
 import torch.backends.cudnn as cudnn
 
 
-data_root_dict = {"ImageNet": "../data/ImageNet"}
+data_root_dict = {"ImageNet": "../data/ImageNet", "S2_Dataset": None}
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cfg", default=None, type=str)
@@ -30,6 +30,9 @@ parser.add_argument("--lr", type=float, default=None)
 parser.add_argument("--remine_lambda", default=None, type=float)
 parser.add_argument("--work_dir", default="./exp_results", type=str, help="output dir")
 parser.add_argument("--exp_name", default="test", type=str, help="exp name")
+parser.add_argument(
+    "--fold", default=0, type=int, help="fold number for cross-validation"
+)
 parser.add_argument(
     "--gpu", default="0", type=str, help="id(s) for CUDA_VISIBLE_DEVICES"
 )
@@ -128,6 +131,7 @@ if not test_mode:
             sampler_dic=sampler_dic,
             num_workers=training_opt["num_workers"],
             top_k_class=training_opt["top_k"] if "top_k" in training_opt else None,
+            fold=args.fold,
             reverse=args.train_reverse,
         )
         for x in splits
