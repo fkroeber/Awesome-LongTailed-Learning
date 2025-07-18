@@ -169,54 +169,60 @@ class MoCo(nn.Module):
         self.queue_ptr[0] = ptr
 
     @torch.no_grad()
-    def _batch_shuffle_ddp(self, x, y):
+    def _batch_shuffle(self, x, y):
         """
-        Batch shuffle, for making use of BatchNorm.
-        *** Only support DistributedDataParallel (DDP) model. ***
+        Batch shuffle for single GPU or DDP.
+        If DDP, shuffle across all GPUs. If single GPU, shuffle within batch.
         """
-        # gather from all gpus
-        batch_size_this = x.shape[0]
-        x_gather = concat_all_gather(x)
-        y_gather = concat_all_gather(y)
-        batch_size_all = x_gather.shape[0]
-
-        num_gpus = batch_size_all // batch_size_this
-
-        # random shuffle index
-        idx_shuffle = torch.randperm(batch_size_all).cuda()
-
-        # broadcast to all gpus
-        torch.distributed.broadcast(idx_shuffle, src=0)
-
-        # index for restoring
-        idx_unshuffle = torch.argsort(idx_shuffle)
-
-        # shuffled index for this gpu
-        gpu_idx = torch.distributed.get_rank()
-        idx_this = idx_shuffle.view(num_gpus, -1)[gpu_idx]
-
-        return x_gather[idx_this], y_gather[idx_this], idx_unshuffle
+        batch_size = x.shape[0]
+        if (
+            not torch.distributed.is_available()
+            or not torch.distributed.is_initialized()
+        ):
+            # Single GPU: shuffle within batch
+            idx_shuffle = torch.randperm(batch_size).to(x.device)
+            idx_unshuffle = torch.argsort(idx_shuffle)
+            x_shuffled = x[idx_shuffle]
+            y_shuffled = y[idx_shuffle]
+            return x_shuffled, y_shuffled, idx_unshuffle
+        else:
+            # DDP: original logic
+            batch_size_this = x.shape[0]
+            x_gather = concat_all_gather(x)
+            y_gather = concat_all_gather(y)
+            batch_size_all = x_gather.shape[0]
+            num_gpus = batch_size_all // batch_size_this
+            idx_shuffle = torch.randperm(batch_size_all).cuda()
+            torch.distributed.broadcast(idx_shuffle, src=0)
+            idx_unshuffle = torch.argsort(idx_shuffle)
+            gpu_idx = torch.distributed.get_rank()
+            idx_this = idx_shuffle.view(num_gpus, -1)[gpu_idx]
+            return x_gather[idx_this], y_gather[idx_this], idx_unshuffle
 
     @torch.no_grad()
-    def _batch_unshuffle_ddp(self, x, y, idx_unshuffle):
+    def _batch_unshuffle(self, x, y, idx_unshuffle):
         """
-        Undo batch shuffle.
-        *** Only support DistributedDataParallel (DDP) model. ***
+        Undo batch shuffle for single GPU or DDP.
         """
-        # gather from all gpus
-        batch_size_this = x.shape[0]
-        x_gather = concat_all_gather(x)
-        y_gather = concat_all_gather(y)
-
-        batch_size_all = x_gather.shape[0]
-
-        num_gpus = batch_size_all // batch_size_this
-
-        # restored index for this gpu
-        gpu_idx = torch.distributed.get_rank()
-        idx_this = idx_unshuffle.view(num_gpus, -1)[gpu_idx]
-
-        return x_gather[idx_this], y_gather[idx_this]
+        batch_size = x.shape[0]
+        if (
+            not torch.distributed.is_available()
+            or not torch.distributed.is_initialized()
+        ):
+            # Single GPU: unshuffle within batch
+            x_unshuffled = x[idx_unshuffle]
+            y_unshuffled = y[idx_unshuffle]
+            return x_unshuffled, y_unshuffled
+        else:
+            # DDP: original logic
+            batch_size_this = x.shape[0]
+            x_gather = concat_all_gather(x)
+            y_gather = concat_all_gather(y)
+            batch_size_all = x_gather.shape[0]
+            num_gpus = batch_size_all // batch_size_this
+            gpu_idx = torch.distributed.get_rank()
+            idx_this = idx_unshuffle.view(num_gpus, -1)[gpu_idx]
+            return x_gather[idx_this], y_gather[idx_this]
 
     def _train(self, im_q, im_k, labels):
         """
@@ -236,13 +242,13 @@ class MoCo(nn.Module):
             self._momentum_update_key_encoder()  # update the key encoder
 
             # shuffle for making use of BN
-            im_k, labels, idx_unshuffle = self._batch_shuffle_ddp(im_k, labels)
+            im_k, labels, idx_unshuffle = self._batch_shuffle(im_k, labels)
 
             k = self.encoder_k(im_k)  # keys: NxC
             k = nn.functional.normalize(k, dim=1)
 
             # undo shuffle
-            k, labels = self._batch_unshuffle_ddp(k, labels, idx_unshuffle)
+            k, labels = self._batch_unshuffle(k, labels, idx_unshuffle)
 
         # compute logits
         features = torch.cat((q, k, self.queue.clone().detach()), dim=0)
@@ -274,12 +280,13 @@ class MoCo(nn.Module):
 def concat_all_gather(tensor):
     """
     Performs all_gather operation on the provided tensors.
-    *** Warning ***: torch.distributed.all_gather has no gradient.
+    For single GPU, just returns the tensor itself.
     """
+    if not torch.distributed.is_available() or not torch.distributed.is_initialized():
+        return tensor
     tensors_gather = [
         torch.ones_like(tensor) for _ in range(torch.distributed.get_world_size())
     ]
     torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-
     output = torch.cat(tensors_gather, dim=0)
     return output
