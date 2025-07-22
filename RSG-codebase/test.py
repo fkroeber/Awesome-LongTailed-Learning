@@ -18,7 +18,7 @@ import models
 from collections import OrderedDict
 from tensorboardX import SummaryWriter
 from sklearn.metrics import confusion_matrix
-from imagenet_lt_data import *
+from data_imagenet import *
 from utils import *
 
 

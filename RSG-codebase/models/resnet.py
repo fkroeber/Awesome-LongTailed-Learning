@@ -184,7 +184,7 @@ class ResNet(nn.Module):
         self.groups = groups
         self.base_width = width_per_group
         self.conv1 = nn.Conv2d(
-            3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False
+            50, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
@@ -326,10 +326,31 @@ def _resnet(
     )
 
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
+        pretrained_dict = torch.hub.load_state_dict_from_url(
+            model_urls[arch], progress=progress
+        )
         model_dict = model.state_dict()
-        state_dict = {k: v for k, v in state_dict.items() if k in model_dict}
-        model_dict.update(state_dict)
+        # copy weights to input channels from model_dict
+        conv1_weight_shape = model_dict["conv1.weight"].shape
+        in_channels = conv1_weight_shape[1]
+        print(f"Inferred input channels: {in_channels}")
+        if in_channels != 3:
+            print(
+                f"Replicating pretrained conv1 weights for {in_channels} input channels."
+            )
+            conv1_weight = pretrained_dict["conv1.weight"]  # shape: (out_c, 3, k, k)
+            repeat_times = (in_channels + 2) // 3  # ceiling division
+            conv1_weight_expanded = conv1_weight.repeat(1, repeat_times, 1, 1)[
+                :, :in_channels, :, :
+            ]
+            pretrained_dict["conv1.weight"] = conv1_weight_expanded
+        # load weights that match in size
+        pretrained_dict = {
+            k: v
+            for k, v in pretrained_dict.items()
+            if k in model_dict and v.size() == model_dict[k].size()
+        }
+        model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict)
 
     return model
@@ -359,17 +380,38 @@ def _resnext(
     )
 
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
+        pretrained_dict = torch.hub.load_state_dict_from_url(
+            model_urls[arch], progress=progress
+        )
         model_dict = model.state_dict()
-        state_dict = {k: v for k, v in state_dict.items() if k in model_dict}
-        model_dict.update(state_dict)
+        # copy weights to input channels from model_dict
+        conv1_weight_shape = model_dict["conv1.weight"].shape
+        in_channels = conv1_weight_shape[1]
+        print(f"Inferred input channels: {in_channels}")
+        if in_channels != 3:
+            print(
+                f"Replicating pretrained conv1 weights for {in_channels} input channels."
+            )
+            conv1_weight = pretrained_dict["conv1.weight"]  # shape: (out_c, 3, k, k)
+            repeat_times = (in_channels + 2) // 3  # ceiling division
+            conv1_weight_expanded = conv1_weight.repeat(1, repeat_times, 1, 1)[
+                :, :in_channels, :, :
+            ]
+            pretrained_dict["conv1.weight"] = conv1_weight_expanded
+        # load weights that match in size
+        pretrained_dict = {
+            k: v
+            for k, v in pretrained_dict.items()
+            if k in model_dict and v.size() == model_dict[k].size()
+        }
+        model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict)
 
     return model
 
 
 def resnet50(
-    pretrained=False,
+    pretrained=True,
     progress=True,
     num_classes=1000,
     head_lists=[],
@@ -423,7 +465,7 @@ def resnet152(
 
 
 def resnext50_32x4d(
-    pretrained=False,
+    pretrained=True,
     progress=True,
     num_classes=1000,
     head_lists=[],

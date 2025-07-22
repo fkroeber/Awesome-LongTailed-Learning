@@ -6,7 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.utils.multiclass import unique_labels
 
 
@@ -164,30 +164,6 @@ def save_checkpoint(args, state, is_best):
         shutil.copyfile(filename, filename.replace("pth.tar", "best.pth.tar"))
 
 
-class AverageMeter(object):
-
-    def __init__(self, name, fmt=":f"):
-        self.name = name
-        self.fmt = fmt
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-    def __str__(self):
-        fmtstr = "{name} {val" + self.fmt + "} ({avg" + self.fmt + "})"
-        return fmtstr.format(**self.__dict__)
-
-
 def accuracy(output, target, topk=(1,)):
 
     with torch.no_grad():
@@ -203,3 +179,9 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+
+
+def macro_f1_score(y_true, y_pred, num_classes):
+    y_true = y_true.cpu().numpy()
+    y_pred = y_pred.cpu().numpy()
+    return f1_score(y_true, y_pred, average="macro", labels=list(range(num_classes)))

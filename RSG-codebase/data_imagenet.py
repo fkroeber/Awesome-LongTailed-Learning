@@ -20,9 +20,15 @@ class ImageNet_LT(data.Dataset):
         self.train_dataset = []
         self.val_dataset = []
         self.test_dataset = []
-        self.train_txt = "./ImageNet_LT_train.txt"
-        self.val_txt = "./ImageNet_LT_val.txt"
-        self.test_txt = "./ImageNet_LT_test.txt"
+        self.train_txt = (
+            "/home/fkr/repositories/awesome_longtail/data/ImageNet_LT_train.txt"
+        )
+        self.val_txt = (
+            "/home/fkr/repositories/awesome_longtail/data/ImageNet_LT_val.txt"
+        )
+        self.test_txt = (
+            "/home/fkr/repositories/awesome_longtail/data/ImageNet_LT_test.txt"
+        )
         self.cls_num_list_train = [0] * 1000
         self.cls_num_list_val = [0] * 1000
         self.cls_num_list_test = [0] * 1000
