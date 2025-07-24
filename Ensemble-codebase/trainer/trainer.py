@@ -127,9 +127,15 @@ class Trainer(BaseTrainer):
             self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
             self.train_metrics.update("loss", loss.item())
             for met in self.metric_ftns:
-                self.train_metrics.update(
-                    met.__name__, met(output, target, return_length=True)
-                )
+                if met.__name__ in ["macro_f1", "classwise_accuracy"]:
+                    self.train_metrics.update(
+                        met.__name__,
+                        met(output, target, self.data_loader.dataset.num_classes),
+                    )
+                else:
+                    self.train_metrics.update(
+                        met.__name__, met(output, target, return_length=True)
+                    )
 
             if batch_idx % self.log_step == 0:
                 self.logger.debug(
@@ -190,9 +196,15 @@ class Trainer(BaseTrainer):
                 )
                 self.valid_metrics.update("loss", loss.item())
                 for met in self.metric_ftns:
-                    self.valid_metrics.update(
-                        met.__name__, met(output, target, return_length=True)
-                    )
+                    if met.__name__ in ["macro_f1", "classwise_accuracy"]:
+                        self.valid_metrics.update(
+                            met.__name__,
+                            met(output, target, self.data_loader.dataset.num_classes),
+                        )
+                    else:
+                        self.valid_metrics.update(
+                            met.__name__, met(output, target, return_length=True)
+                        )
                 self.writer.add_image(
                     "input", make_grid(data.cpu(), nrow=8, normalize=True)
                 )
