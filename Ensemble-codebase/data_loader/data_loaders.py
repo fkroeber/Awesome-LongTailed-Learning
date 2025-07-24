@@ -1,1 +1,2 @@
 from .imagenet_lt_data_loaders import ImageNetLTDataLoader
+from .s2_data_loaders import S2DataLoader
