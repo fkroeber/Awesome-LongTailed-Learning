@@ -6,10 +6,11 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import autocast
+from utils import autocast, load_state_dict
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -121,6 +122,7 @@ class ResNext(nn.Module):
         reduce_dimension=False,
         layer3_output_dim=None,
         layer4_output_dim=None,
+        pretrained=False,
     ):
         self.inplanes = 64
         super(ResNext, self).__init__()
@@ -166,6 +168,37 @@ class ResNext(nn.Module):
                 m.bias.data.zero_()
 
         self.linear = nn.Linear(layer4_output_dim * block.expansion, num_classes)
+
+        if pretrained:
+            pretrained_dict = torch.hub.load_state_dict_from_url(
+                "https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth",
+                progress=True,
+            )
+            model_dict = self.state_dict()
+            # copy weights to input channels from model_dict
+            conv1_weight_shape = model_dict["conv1.weight"].shape
+            in_channels = conv1_weight_shape[1]
+            print(f"Inferred input channels: {in_channels}")
+            if in_channels != 3:
+                print(
+                    f"Replicating pretrained conv1 weights for {in_channels} input channels."
+                )
+                conv1_weight = pretrained_dict[
+                    "conv1.weight"
+                ]  # shape: (out_c, 3, k, k)
+                repeat_times = (in_channels + 2) // 3  # ceiling division
+                conv1_weight_expanded = conv1_weight.repeat(1, repeat_times, 1, 1)[
+                    :, :in_channels, :, :
+                ]
+                pretrained_dict["conv1.weight"] = conv1_weight_expanded
+            # load weights that match in size
+            pretrained_dict = {
+                k: v
+                for k, v in pretrained_dict.items()
+                if k in model_dict and v.size() == model_dict[k].size()
+            }
+            model_dict.update(pretrained_dict)
+            load_state_dict(self, model_dict)
 
     def _hook_before_iter(self):
         assert (
